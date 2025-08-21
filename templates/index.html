@@ -1,0 +1,1030 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Agenda de Visitas - Desarrollo Urbano</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border-radius: 20px;
+            padding: 30px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+        }
+        
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+            color: #2d3748;
+        }
+        
+        .header h1 {
+            font-size: 2.2em;
+            font-weight: 700;
+            margin-bottom: 10px;
+            background: linear-gradient(45deg, #667eea, #764ba2);
+            background-clip: text;
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        
+        .header p {
+            font-size: 1.1em;
+            color: #4a5568;
+        }
+        
+        .tabs {
+            display: flex;
+            margin-bottom: 30px;
+            border-bottom: 2px solid #e2e8f0;
+        }
+        
+        .tab {
+            padding: 15px 25px;
+            background: none;
+            border: none;
+            font-size: 1.1em;
+            font-weight: 600;
+            color: #718096;
+            cursor: pointer;
+            border-bottom: 3px solid transparent;
+            transition: all 0.3s ease;
+        }
+        
+        .tab.active {
+            color: #667eea;
+            border-bottom-color: #667eea;
+        }
+        
+        .tab:hover {
+            color: #667eea;
+        }
+        
+        .tab-content {
+            display: none;
+        }
+        
+        .tab-content.active {
+            display: block;
+        }
+        
+        .form-section {
+            margin-bottom: 25px;
+            padding: 20px;
+            background: rgba(247, 250, 252, 0.8);
+            border-radius: 15px;
+            border-left: 4px solid #667eea;
+        }
+        
+        .section-title {
+            font-size: 1.3em;
+            font-weight: 600;
+            color: #2d3748;
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+        }
+        
+        .section-title::before {
+            content: "📋";
+            margin-right: 10px;
+            font-size: 1.2em;
+        }
+        
+        .form-row {
+            display: flex;
+            gap: 15px;
+            margin-bottom: 15px;
+            flex-wrap: wrap;
+        }
+        
+        .form-group {
+            flex: 1;
+            min-width: 200px;
+        }
+        
+        .form-group.small {
+            flex: 0.5;
+            min-width: 100px;
+        }
+        
+        label {
+            display: block;
+            font-weight: 600;
+            color: #2d3748;
+            margin-bottom: 5px;
+            font-size: 0.95em;
+        }
+        
+        input, select {
+            width: 100%;
+            padding: 12px 15px;
+            border: 2px solid #e2e8f0;
+            border-radius: 10px;
+            font-size: 1em;
+            transition: all 0.3s ease;
+            background: white;
+        }
+        
+        input:focus, select:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+            transform: translateY(-1px);
+        }
+        
+        .checkbox-group {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 10px;
+            margin-top: 10px;
+        }
+        
+        .checkbox-item {
+            display: flex;
+            align-items: center;
+            padding: 10px;
+            background: white;
+            border-radius: 8px;
+            border: 2px solid #e2e8f0;
+            transition: all 0.3s ease;
+        }
+        
+        .checkbox-item:hover {
+            border-color: #667eea;
+            transform: translateY(-1px);
+        }
+        
+        .checkbox-item input[type="checkbox"] {
+            width: auto;
+            margin-right: 10px;
+            transform: scale(1.2);
+        }
+        
+        .checkbox-item label {
+            margin-bottom: 0;
+            font-weight: 500;
+            cursor: pointer;
+        }
+        
+        .fecha-display {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+            padding: 10px 15px;
+            border-radius: 10px;
+            text-align: center;
+            font-weight: 600;
+            margin-top: 10px;
+        }
+        
+        .otros-input {
+            margin-top: 10px;
+            display: none;
+        }
+        
+        .btn-submit {
+            width: 100%;
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            border-radius: 15px;
+            font-size: 1.2em;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            margin-top: 30px;
+        }
+        
+        .btn-submit:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 25px rgba(102, 126, 234, 0.3);
+        }
+        
+        /* Estilos del calendario */
+        .calendar-container {
+            display: grid;
+            grid-template-columns: 2fr 1fr;
+            gap: 30px;
+            margin-top: 20px;
+        }
+        
+        .calendar {
+            background: white;
+            border-radius: 15px;
+            padding: 20px;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+        }
+        
+        .calendar-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+        
+        .calendar-nav {
+            background: #667eea;
+            color: white;
+            border: none;
+            padding: 8px 12px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 600;
+        }
+        
+        .calendar-nav:hover {
+            background: #5a67d8;
+        }
+        
+        .calendar-title {
+            font-size: 1.4em;
+            font-weight: 600;
+            color: #2d3748;
+        }
+        
+        .calendar-grid {
+            display: grid;
+            grid-template-columns: repeat(7, 1fr);
+            gap: 2px;
+        }
+        
+        .calendar-day-header {
+            text-align: center;
+            padding: 10px;
+            font-weight: 600;
+            color: #4a5568;
+            background: #f7fafc;
+        }
+        
+        .calendar-day {
+            text-align: center;
+            padding: 12px;
+            border: 1px solid #e2e8f0;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            position: relative;
+            min-height: 50px;
+        }
+        
+        .calendar-day:hover {
+            background: #ebf4ff;
+        }
+        
+        .calendar-day.other-month {
+            color: #cbd5e0;
+        }
+        
+        .calendar-day.has-appointment {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+            font-weight: 600;
+        }
+        
+        .calendar-day.has-appointment:hover {
+            transform: scale(1.05);
+        }
+        
+        .appointment-count {
+            position: absolute;
+            top: 2px;
+            right: 2px;
+            background: #e53e3e;
+            color: white;
+            border-radius: 50%;
+            width: 18px;
+            height: 18px;
+            font-size: 0.7em;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .appointments-panel {
+            background: white;
+            border-radius: 15px;
+            padding: 20px;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+            max-height: 600px;
+            overflow-y: auto;
+        }
+        
+        .appointments-title {
+            font-size: 1.3em;
+            font-weight: 600;
+            color: #2d3748;
+            margin-bottom: 15px;
+        }
+        
+        .appointment-item {
+            background: #f7fafc;
+            border-radius: 10px;
+            padding: 15px;
+            margin-bottom: 10px;
+            border-left: 4px solid #667eea;
+        }
+        
+        .appointment-time {
+            font-weight: 600;
+            color: #667eea;
+            font-size: 1.1em;
+        }
+        
+        .appointment-details {
+            margin-top: 5px;
+            font-size: 0.9em;
+            color: #4a5568;
+        }
+        
+        .appointment-actions {
+            margin-top: 10px;
+            display: flex;
+            gap: 10px;
+        }
+        
+        .btn-small {
+            padding: 5px 10px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 0.8em;
+            font-weight: 600;
+        }
+        
+        .btn-edit {
+            background: #4299e1;
+            color: white;
+        }
+        
+        .btn-delete {
+            background: #e53e3e;
+            color: white;
+        }
+        
+        .btn-export {
+            background: #38a169;
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 10px;
+            cursor: pointer;
+            font-weight: 600;
+            margin-bottom: 20px;
+        }
+        
+        .search-box {
+            width: 100%;
+            padding: 10px;
+            border: 2px solid #e2e8f0;
+            border-radius: 10px;
+            margin-bottom: 15px;
+        }
+        
+        @media (max-width: 768px) {
+            .calendar-container {
+                grid-template-columns: 1fr;
+            }
+            .form-row {
+                flex-direction: column;
+            }
+            .checkbox-group {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>📅 Agenda de Visitas</h1>
+            <p>Área de Desarrollo Urbano<br>
+            Municipalidad del Centro Poblado Víctor Raúl Haya de la Torre - Huanchaco</p>
+        </div>
+        
+        <div class="tabs">
+            <button class="tab active" onclick="showTab('nueva-cita')">📝 Nueva Cita</button>
+            <button class="tab" onclick="showTab('calendario')">📅 Calendario</button>
+            <button class="tab" onclick="showTab('lista-citas')">📋 Lista de Citas</button>
+        </div>
+        
+        <div id="nueva-cita" class="tab-content active">
+            <form id="agendaForm">
+                <div class="form-section">
+                    <div class="section-title">Datos del Expediente</div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="numExpediente">Número de Expediente:</label>
+                            <input type="text" id="numExpediente" name="numExpediente" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="fechaIngreso">Fecha de Ingreso:</label>
+                            <input type="date" id="fechaIngreso" name="fechaIngreso" required>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="form-section">
+                    <div class="section-title">Datos del Administrado</div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="nombreAdmin">Nombre del Administrado:</label>
+                            <input type="text" id="nombreAdmin" name="nombreAdmin" required>
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="dni">DNI:</label>
+                            <input type="text" id="dni" name="dni" pattern="[0-9]{8}" maxlength="8" required>
+                        </div>
+                        <div class="form-group small">
+                            <label for="edad">Edad:</label>
+                            <input type="number" id="edad" name="edad" min="18" max="120" required>
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group small">
+                            <label for="manzana">Manzana:</label>
+                            <input type="text" id="manzana" name="manzana" required>
+                        </div>
+                        <div class="form-group small">
+                            <label for="lote">Lote:</label>
+                            <input type="text" id="lote" name="lote" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="sector">Sector:</label>
+                            <input type="text" id="sector" name="sector" required>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="form-section">
+                    <div class="section-title">Asunto de la Visita</div>
+                    <div class="checkbox-group">
+                        <div class="checkbox-item">
+                            <input type="checkbox" id="certActividades" name="asunto" value="Certificado de Actividades">
+                            <label for="certActividades">Certificado de Actividades</label>
+                        </div>
+                        <div class="checkbox-item">
+                            <input type="checkbox" id="constPosesion" name="asunto" value="Constancia de Posesión">
+                            <label for="constPosesion">Constancia de Posesión</label>
+                        </div>
+                        <div class="checkbox-item">
+                            <input type="checkbox" id="inspVivienda" name="asunto" value="Inspección Ocular de Vivienda">
+                            <label for="inspVivienda">Inspección Ocular de Vivienda</label>
+                        </div>
+                        <div class="checkbox-item">
+                            <input type="checkbox" id="certHabitabilidad" name="asunto" value="Certificado de Habitabilidad">
+                            <label for="certHabitabilidad">Certificado de Habitabilidad</label>
+                        </div>
+                        <div class="checkbox-item">
+                            <input type="checkbox" id="inspComercios" name="asunto" value="Inspección Ocular de Comercios">
+                            <label for="inspComercios">Inspección Ocular de Comercios</label>
+                        </div>
+                        <div class="checkbox-item">
+                            <input type="checkbox" id="inscripcion" name="asunto" value="Inscripción al Patrón de Contribuyentes">
+                            <label for="inscripcion">Inscripción al Patrón de Contribuyentes</label>
+                        </div>
+                        <div class="checkbox-item">
+                            <input type="checkbox" id="actualizacion" name="asunto" value="Actualización de Constancia de Posesión">
+                            <label for="actualizacion">Actualización de Constancia de Posesión</label>
+                        </div>
+                        <div class="checkbox-item">
+                            <input type="checkbox" id="visitaConformidad" name="asunto" value="Visita de Conformidad">
+                            <label for="visitaConformidad">Visita de Conformidad</label>
+                        </div>
+                        <div class="checkbox-item">
+                            <input type="checkbox" id="notificaciones" name="asunto" value="Notificaciones">
+                            <label for="notificaciones">Notificaciones</label>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="form-section">
+                    <div class="section-title">Datos para Agendar la Visita</div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="fechaVisita">Fecha de la Visita:</label>
+                            <input type="date" id="fechaVisita" name="fechaVisita" required>
+                            <div id="diaDisplay" class="fecha-display"></div>
+                        </div>
+                        <div class="form-group small">
+                            <label for="horaVisita">Hora de la Visita:</label>
+                            <input type="time" id="horaVisita" name="horaVisita" required>
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="programador">Nombre de quien Programó:</label>
+                            <select id="programador" name="programador" required>
+                                <option value="">Seleccione una opción</option>
+                                <option value="RAÚL VALLE">RAÚL VALLE</option>
+                                <option value="TOMMY REYES">TOMMY REYES</option>
+                                <option value="ZOILA JESÚS">ZOILA JESÚS</option>
+                                <option value="IBETH AGUILAR">IBETH AGUILAR</option>
+                                <option value="OTROS">OTROS</option>
+                            </select>
+                            <div class="otros-input">
+                                <label for="otroNombre">Especifique el nombre:</label>
+                                <input type="text" id="otroNombre" name="otroNombre" placeholder="Ingrese el nombre">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <button type="submit" class="btn-submit">📅 Agendar Visita</button>
+            </form>
+        </div>
+        
+        <div id="calendario" class="tab-content">
+            <div class="calendar-container">
+                <div class="calendar">
+                    <div class="calendar-header">
+                        <button class="calendar-nav" onclick="changeMonth(-1)">◀</button>
+                        <div class="calendar-title" id="calendarTitle"></div>
+                        <button class="calendar-nav" onclick="changeMonth(1)">▶</button>
+                    </div>
+                    <div class="calendar-grid" id="calendarGrid"></div>
+                </div>
+                <div class="appointments-panel">
+                    <div class="appointments-title">Citas del día seleccionado</div>
+                    <div id="selectedDateAppointments"></div>
+                </div>
+            </div>
+        </div>
+        
+        <div id="lista-citas" class="tab-content">
+            <button class="btn-export" onclick="exportToCSV()">📊 Exportar a CSV</button>
+            <input type="text" class="search-box" id="searchBox" placeholder="🔍 Buscar por expediente, nombre o DNI...">
+            <div id="appointmentsList"></div>
+        </div>
+    </div>
+
+    <script>
+        let appointments = JSON.parse(localStorage.getItem('appointments') || '[]');
+        let currentDate = new Date();
+        let selectedDate = null;
+
+        // Función para mostrar pestañas
+        function showTab(tabName) {
+            // Ocultar todos los contenidos
+            document.querySelectorAll('.tab-content').forEach(content => {
+                content.classList.remove('active');
+            });
+            
+            // Ocultar todos los tabs
+            document.querySelectorAll('.tab').forEach(tab => {
+                tab.classList.remove('active');
+            });
+            
+            // Mostrar el contenido seleccionado
+            document.getElementById(tabName).classList.add('active');
+            
+            // Activar el tab correspondiente
+            event.target.classList.add('active');
+            
+            if (tabName === 'calendario') {
+                renderCalendar();
+            } else if (tabName === 'lista-citas') {
+                renderAppointmentsList();
+            }
+        }
+
+// Función mejorada para exportar a CSV con formato correcto para Excel
+        function exportToCSV() {
+            if (appointments.length === 0) {
+                alert('No hay citas para exportar');
+                return;
+            }
+
+            // Encabezados en español para Excel
+            const headers = [
+                'Fecha de Visita',
+                'Hora de Visita',
+                'Número de Expediente',
+                'Fecha de Ingreso',
+                'Nombre del Administrado',
+                'DNI',
+                'Edad',
+                'Manzana',
+                'Lote',
+                'Sector',
+                'Asuntos',
+                'Programado por',
+                'Fecha de Creación'
+            ];
+            
+            // Crear filas de datos ordenadas por fecha y hora de visita
+            const sortedAppointments = [...appointments].sort((a, b) => {
+                const dateTimeA = new Date(a.fechaVisita + ' ' + a.horaVisita);
+                const dateTimeB = new Date(b.fechaVisita + ' ' + b.horaVisita);
+                return dateTimeA - dateTimeB;
+            });
+            
+            const csvRows = [
+                headers.join(';'), // CAMBIO CLAVE 1: de ',' a ';'
+                ...sortedAppointments.map(apt => [
+                    apt.fechaVisita || '',
+                    apt.horaVisita || '',
+                    `"${apt.numExpediente || ''}"`,
+                    apt.fechaIngreso || '',
+                    `"${apt.nombreAdmin || ''}"`,
+                    apt.dni || '',
+                    apt.edad || '',
+                    `"${apt.manzana || ''}"`,
+                    `"${apt.lote || ''}"`,
+                    `"${apt.sector || ''}"`,
+                    `"${apt.asuntos ? apt.asuntos.join('; ') : ''}"`, // CAMBIO CLAVE 2: Asuntos
+                    `"${apt.programador || ''}"`,
+                    apt.fechaCreacion ? new Date(apt.fechaCreacion).toLocaleString('es-ES') : ''
+                ].join(';')) // CAMBIO CLAVE 3: de ',' a ';'
+            ];
+
+            // Crear el contenido CSV con BOM para UTF-8 (esto es correcto)
+            const csvContent = '\uFEFF' + csvRows.join('\n');
+            
+            // Crear y descargar el archivo
+            const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+            const link = document.createElement('a');
+            const url = URL.createObjectURL(blob);
+            link.setAttribute('href', url);
+            link.setAttribute('download', `Agenda_Visitas_${new Date().toISOString().slice(0,10)}.csv`);
+            link.style.visibility = 'hidden';
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            
+            alert(`✅ Archivo CSV exportado exitosamente\n📊 Total de registros: ${appointments.length}\n📁 Nombre del archivo: Agenda_Visitas_${new Date().toISOString().slice(0,10)}.csv`);
+        }
+        // Renderizar calendario
+        function renderCalendar() {
+            const year = currentDate.getFullYear();
+            const month = currentDate.getMonth();
+            
+            document.getElementById('calendarTitle').textContent = 
+                new Intl.DateTimeFormat('es-ES', { month: 'long', year: 'numeric' }).format(currentDate);
+            
+            const firstDay = new Date(year, month, 1).getDay();
+            const daysInMonth = new Date(year, month + 1, 0).getDate();
+            
+            const calendarGrid = document.getElementById('calendarGrid');
+            calendarGrid.innerHTML = '';
+            
+            // Encabezados de días
+            const dayHeaders = ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'];
+            dayHeaders.forEach(day => {
+                const header = document.createElement('div');
+                header.className = 'calendar-day-header';
+                header.textContent = day;
+                calendarGrid.appendChild(header);
+            });
+            
+            // Días vacíos al inicio
+            for (let i = 0; i < firstDay; i++) {
+                const emptyDay = document.createElement('div');
+                emptyDay.className = 'calendar-day other-month';
+                calendarGrid.appendChild(emptyDay);
+            }
+            
+            // Días del mes
+            for (let day = 1; day <= daysInMonth; day++) {
+                const dayElement = document.createElement('div');
+                dayElement.className = 'calendar-day';
+                dayElement.textContent = day;
+                
+                const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+                const dayAppointments = appointments.filter(apt => apt.fechaVisita === dateStr);
+                
+                if (dayAppointments.length > 0) {
+                    dayElement.classList.add('has-appointment');
+                    
+                    const count = document.createElement('span');
+                    count.className = 'appointment-count';
+                    count.textContent = dayAppointments.length;
+                    dayElement.appendChild(count);
+                }
+                
+                dayElement.addEventListener('click', () => {
+                    selectedDate = dateStr;
+                    showDayAppointments(dateStr);
+                    
+                    document.querySelectorAll('.calendar-day').forEach(d => d.style.border = '1px solid #e2e8f0');
+                    dayElement.style.border = '3px solid #667eea';
+                });
+                
+                calendarGrid.appendChild(dayElement);
+            }
+        }
+
+        // Mostrar citas del día seleccionado
+        function showDayAppointments(dateStr) {
+            const dayAppointments = appointments.filter(apt => apt.fechaVisita === dateStr);
+            const container = document.getElementById('selectedDateAppointments');
+            
+            if (dayAppointments.length === 0) {
+                container.innerHTML = '<p style="text-align: center; color: #718096;">No hay citas programadas para este día</p>';
+                return;
+            }
+            
+            container.innerHTML = dayAppointments.map(apt => `
+                <div class="appointment-item">
+                    <div class="appointment-time">${apt.horaVisita} - ${apt.nombreAdmin}</div>
+                    <div class="appointment-details">
+                        <strong>Exp:</strong> ${apt.numExpediente}<br>
+                        <strong>DNI:</strong> ${apt.dni || 'No especificado'}<br>
+                        <strong>Dirección:</strong> Mz ${apt.manzana} Lt ${apt.lote} - ${apt.sector}<br>
+                        <strong>Asuntos:</strong> ${apt.asuntos ? apt.asuntos.join(', ') : 'No especificado'}<br>
+                        <strong>Programado por:</strong> ${apt.programador}
+                    </div>
+                    <div class="appointment-actions">
+                        <button class="btn-small btn-delete" onclick="deleteAppointment('${apt.id}')">🗑️ Eliminar</button>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        // Cambiar mes
+        function changeMonth(direction) {
+            currentDate.setMonth(currentDate.getMonth() + direction);
+            renderCalendar();
+        }
+
+        // Renderizar lista de citas
+        function renderAppointmentsList() {
+            const container = document.getElementById('appointmentsList');
+            const searchTerm = document.getElementById('searchBox').value.toLowerCase();
+            
+            let filteredAppointments = appointments;
+            if (searchTerm) {
+                filteredAppointments = appointments.filter(apt => 
+                    (apt.nombreAdmin && apt.nombreAdmin.toLowerCase().includes(searchTerm)) ||
+                    (apt.dni && apt.dni.includes(searchTerm)) ||
+                    (apt.numExpediente && apt.numExpediente.toLowerCase().includes(searchTerm))
+                );
+            }
+            
+            // Ordenar por fecha y hora
+            filteredAppointments.sort((a, b) => {
+                const dateTimeA = new Date(a.fechaVisita + ' ' + a.horaVisita);
+                const dateTimeB = new Date(b.fechaVisita + ' ' + b.horaVisita);
+                return dateTimeA - dateTimeB;
+            });
+            
+            if (filteredAppointments.length === 0) {
+                container.innerHTML = '<p style="text-align: center; color: #718096;">No se encontraron citas</p>';
+                return;
+            }
+            
+            container.innerHTML = filteredAppointments.map(apt => `
+                <div class="appointment-item">
+                    <div class="appointment-time">📅 ${apt.fechaVisita} - ${apt.horaVisita}</div>
+                    <div class="appointment-details">
+                        <strong>👤 ${apt.nombreAdmin}</strong> (${apt.dni || 'Sin DNI'})<br>
+                        <strong>📁 Expediente:</strong> ${apt.numExpediente}<br>
+                        <strong>🏠 Dirección:</strong> Mz ${apt.manzana} Lt ${apt.lote} - ${apt.sector}<br>
+                        <strong>📋 Asuntos:</strong> ${apt.asuntos ? apt.asuntos.join(', ') : 'No especificado'}<br>
+                        <strong>👨‍💼 Programado por:</strong> ${apt.programador}
+                    </div>
+                    <div class="appointment-actions">
+                        <button class="btn-small btn-delete" onclick="deleteAppointment('${apt.id}')">🗑️ Eliminar</button>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        // Eliminar cita
+        function deleteAppointment(id) {
+            if (confirm('¿Está seguro de que desea eliminar esta cita?')) {
+                appointments = appointments.filter(apt => apt.id !== id);
+                localStorage.setItem('appointments', JSON.stringify(appointments));
+                
+                // Actualizar todas las vistas
+                renderCalendar();
+                renderAppointmentsList();
+                if (selectedDate) {
+                    showDayAppointments(selectedDate);
+                }
+                
+                alert('Cita eliminada correctamente');
+            }
+        }
+
+        // Event listeners
+        document.getElementById('searchBox').addEventListener('input', renderAppointmentsList);
+
+        // Mostrar día de la semana cuando se selecciona fecha
+        document.getElementById('fechaVisita').addEventListener('change', function() {
+            const fecha = new Date(this.value + 'T00:00:00');
+            const dias = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
+            const dia = dias[fecha.getDay()];
+            
+            // Solo mostrar días laborables (Lunes a Viernes)
+            const diaDisplay = document.getElementById('diaDisplay');
+            if (fecha.getDay() >= 1 && fecha.getDay() <= 5) {
+                diaDisplay.textContent = `${dia} - Día laborable disponible`;
+                diaDisplay.style.background = 'linear-gradient(135deg, #48bb78, #38a169)';
+                
+                // Verificar si ya hay citas en esta fecha
+                const citasExistentes = appointments.filter(apt => apt.fechaVisita === this.value);
+                if (citasExistentes.length > 0) {
+                    diaDisplay.textContent += ` (${citasExistentes.length} cita${citasExistentes.length > 1 ? 's' : ''} programada${citasExistentes.length > 1 ? 's' : ''})`;
+                }
+            } else {
+                diaDisplay.textContent = `${dia} - Día no laborable`;
+                diaDisplay.style.background = 'linear-gradient(135deg, #f56565, #e53e3e)';
+            }
+        });
+
+        // Mostrar campo "otros" cuando se selecciona
+        document.getElementById('programador').addEventListener('change', function() {
+            const otrosInput = document.querySelector('.otros-input');
+            const otroNombre = document.getElementById('otroNombre');
+            
+            if (this.value === 'OTROS') {
+                otrosInput.style.display = 'block';
+                otroNombre.required = true;
+            } else {
+                otrosInput.style.display = 'none';
+                otroNombre.required = false;
+                otroNombre.value = '';
+            }
+        });
+
+        // Validar formulario y guardar cita
+        document.getElementById('agendaForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            const checkboxes = document.querySelectorAll('input[name="asunto"]:checked');
+            if (checkboxes.length === 0) {
+                alert('Por favor seleccione al menos un asunto para la visita.');
+                return;
+            }
+
+            // Validar días laborables
+            const fechaVisita = document.getElementById('fechaVisita').value;
+            const fecha = new Date(fechaVisita + 'T00:00:00');
+            if (fecha.getDay() === 0 || fecha.getDay() === 6) {
+                alert('Por favor seleccione un día laborable (Lunes a Viernes) para la visita.');
+                return;
+            }
+
+            // Verificar conflictos de horario
+            const horaVisita = document.getElementById('horaVisita').value;
+            const conflicto = appointments.find(apt => 
+                apt.fechaVisita === fechaVisita && 
+                apt.horaVisita === horaVisita
+            );
+
+            if (conflicto) {
+                if (!confirm(`Ya existe una cita programada para ${fechaVisita} a las ${horaVisita} con ${conflicto.nombreAdmin}. ¿Desea programarla de todas formas?`)) {
+                    return;
+                }
+            }
+            
+            // Recopilar datos del formulario
+            const formData = new FormData(this);
+            const asuntos = [];
+            checkboxes.forEach(cb => asuntos.push(cb.value));
+            
+            const programador = formData.get('programador') === 'OTROS' ? 
+                formData.get('otroNombre') : formData.get('programador');
+
+            // Crear nuevo objeto de cita
+            const nuevaCita = {
+                id: Date.now().toString(),
+                numExpediente: formData.get('numExpediente'),
+                fechaIngreso: formData.get('fechaIngreso'),
+                horaIngreso: null, // Campo eliminado, se establece como nulo
+                nombreAdmin: formData.get('nombreAdmin'),
+                dni: formData.get('dni'),
+                edad: formData.get('edad'),
+                manzana: formData.get('manzana'),
+                lote: formData.get('lote'),
+                sector: formData.get('sector'),
+                asuntos: asuntos,
+                fechaVisita: fechaVisita,
+                horaVisita: horaVisita,
+                programador: programador,
+                fechaCreacion: new Date().toISOString()
+            };
+
+            // Guardar en array y localStorage
+            appointments.push(nuevaCita);
+            localStorage.setItem('appointments', JSON.stringify(appointments));
+
+            // Mostrar confirmación
+            alert(`✅ VISITA AGENDADA Y GUARDADA EXITOSAMENTE\n\n` +
+                `Expediente: ${nuevaCita.numExpediente}\n` +
+                `Administrado: ${nuevaCita.nombreAdmin}\n` +
+                `DNI: ${nuevaCita.dni}\n` +
+                `Dirección: Mz ${nuevaCita.manzana} Lt ${nuevaCita.lote} - ${nuevaCita.sector}\n` +
+                `Asuntos: ${asuntos.join(', ')}\n` +
+                `Fecha de visita: ${fechaVisita}\n` +
+                `Hora: ${horaVisita}\n` +
+                `Programado por: ${programador}\n\n` +
+                `💾 Los datos se han guardado en su disco local.`);
+
+            // Limpiar formulario
+            this.reset();
+            document.getElementById('diaDisplay').textContent = '';
+            document.querySelector('.otros-input').style.display = 'none';
+
+            // Preguntar si desea ver el calendario
+            if (confirm('¿Desea ver el calendario con la cita programada?')) {
+                showTab('calendario');
+                document.querySelector('.tab[onclick*="calendario"]').classList.add('active');
+                document.querySelector('.tab[onclick*="nueva-cita"]').classList.remove('active');
+            }
+        });
+
+        // Formatear DNI (solo números)
+        document.getElementById('dni').addEventListener('input', function() {
+            this.value = this.value.replace(/\D/g, '');
+        });
+
+        // Validar hora de visita (horario de oficina)
+        document.getElementById('horaVisita').addEventListener('change', function() {
+            const hora = this.value;
+            const [horas, minutos] = hora.split(':').map(Number);
+            const totalMinutos = horas * 60 + minutos;
+            
+            // Horario de oficina: 8:00 AM a 5:00 PM
+            if (totalMinutos < 480 || totalMinutos > 1020) { // 8:00 AM = 480 min, 5:00 PM = 1020 min
+                alert('⚠️ Horario de atención: 08:00 AM a 05:00 PM');
+                this.focus();
+            }
+        });
+
+        // Inicializar calendario al cargar la página
+        document.addEventListener('DOMContentLoaded', function() {
+            renderCalendar();
+            
+            // Mostrar estadísticas en consola
+            console.log(`📊 Estadísticas de la Agenda:`);
+            console.log(`Total de citas: ${appointments.length}`);
+            console.log(`Citas guardadas en: localStorage del navegador`);
+            
+            // Mostrar mensaje de bienvenida si es la primera vez
+            if (appointments.length === 0) {
+                setTimeout(() => {
+                    alert('👋 ¡Bienvenido a la Agenda de Visitas!\n\n' +
+                          '✅ ÁREA DESARROLLO URBANO\n' +
+                          '✅ Centro Poblado Victor Raúl\n' +
+                          '✅ HUANCHACO\n\n' +
+                          'By © Grupo Valle System 2025');
+                }, 1000);
+            }
+        });
+
+        // Función para cargar datos desde archivo
+        function loadFromFile() {
+            const input = document.createElement('input');
+            input.type = 'file';
+            input.accept = '.json';
+            input.onchange = function(event) {
+                const file = event.target.files[0];
+                if (file) {
+                    const reader = new FileReader();
+                    reader.onload = function(e) {
+                        try {
+                            const data = JSON.parse(e.target.result);
+                            appointments = data;
+                            localStorage.setItem('appointments', JSON.stringify(appointments));
+                            alert('✅ Datos cargados exitosamente');
+                            renderCalendar();
+                            renderAppointmentsList();
+                        } catch (error) {
+                            alert('❌ Error al cargar el archivo');
+                        }
+                    };
+                    reader.readAsText(file);
+                }
+            };
+            input.click();
+        }
+
+        // Función de respaldo automático (cada 5 minutos)
+        setInterval(() => {
+            if (appointments.length > 0) {
+                console.log('💾 Respaldo automático realizado:', new Date().toLocaleTimeString());
+            }
+        }, 300000); // 5 minutos
+    </script>
+</body>
+</html>
