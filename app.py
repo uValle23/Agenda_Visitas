@@ -1,16 +1,22 @@
+import os
 from flask import Flask, render_template, request, redirect
 from flask_sqlalchemy import SQLAlchemy
-import os
 
 app = Flask(__name__)
 
-# Conexión a PostgreSQL desde Render o SQLite si es local
-app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get('DATABASE_URL', 'sqlite:///database.db')
+# Obtener la URL de la base de datos de las variables de entorno
+database_url = os.environ.get('DATABASE_URL')
+
+# Corrige el prefijo si es necesario (Render usa postgres:// pero SQLAlchemy requiere postgresql://)
+if database_url and database_url.startswith("postgres://"):
+    database_url = database_url.replace("postgres://", "postgresql://", 1)
+
+# Configurar la base de datos
+app.config['SQLALCHEMY_DATABASE_URI'] = database_url or 'sqlite:///database.db'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
 db = SQLAlchemy(app)
 
-# Modelo de la tabla
 class Cita(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     nombre = db.Column(db.String(100), nullable=False)
@@ -18,7 +24,6 @@ class Cita(db.Model):
     hora = db.Column(db.String(100), nullable=False)
     descripcion = db.Column(db.Text, nullable=True)
 
-# Crear las tablas si no existen
 with app.app_context():
     db.create_all()
 
