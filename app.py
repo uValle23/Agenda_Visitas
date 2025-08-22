@@ -4,6 +4,12 @@ from flask_sqlalchemy import SQLAlchemy
 
 app = Flask(__name__)
 
+import sys
+
+# Verificar a qué base de datos estás conectado
+print("Base de datos conectada:", app.config['SQLALCHEMY_DATABASE_URI'], file=sys.stderr)
+
+
 # Obtener la URL de la base de datos de las variables de entorno
 database_url = os.environ.get('DATABASE_URL')
 
@@ -45,3 +51,4 @@ def index():
 
 if __name__ == '__main__':
     app.run(debug=True)
+
