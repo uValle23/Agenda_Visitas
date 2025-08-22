@@ -1,45 +1,41 @@
 from flask import Flask, render_template, request, redirect
-import sqlite3
+from flask_sqlalchemy import SQLAlchemy
+import os
 
 app = Flask(__name__)
 
-# Crear la base de datos si no existe
-def init_db():
-    conn = sqlite3.connect('database.db')
-    c = conn.cursor()
-    c.execute('''
-        CREATE TABLE IF NOT EXISTS citas (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            nombre TEXT,
-            fecha TEXT,
-            hora TEXT,
-            descripcion TEXT
-        )
-    ''')
-    conn.commit()
-    conn.close()
+# Conexión a PostgreSQL desde Render o SQLite si es local
+app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get('DATABASE_URL', 'sqlite:///database.db')
+app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
-init_db()
+db = SQLAlchemy(app)
+
+# Modelo de la tabla
+class Cita(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    nombre = db.Column(db.String(100), nullable=False)
+    fecha = db.Column(db.String(100), nullable=False)
+    hora = db.Column(db.String(100), nullable=False)
+    descripcion = db.Column(db.Text, nullable=True)
+
+# Crear las tablas si no existen
+with app.app_context():
+    db.create_all()
 
 @app.route('/', methods=['GET', 'POST'])
 def index():
-    conn = sqlite3.connect('database.db')
-    c = conn.cursor()
-
     if request.method == 'POST':
         nombre = request.form['nombre']
         fecha = request.form['fecha']
         hora = request.form['hora']
         descripcion = request.form['descripcion']
 
-        c.execute('INSERT INTO citas (nombre, fecha, hora, descripcion) VALUES (?, ?, ?, ?)',
-                  (nombre, fecha, hora, descripcion))
-        conn.commit()
+        nueva_cita = Cita(nombre=nombre, fecha=fecha, hora=hora, descripcion=descripcion)
+        db.session.add(nueva_cita)
+        db.session.commit()
         return redirect('/')
 
-    c.execute('SELECT * FROM citas')
-    citas = c.fetchall()
-    conn.close()
+    citas = Cita.query.all()
     return render_template('index.html', citas=citas)
 
 if __name__ == '__main__':
