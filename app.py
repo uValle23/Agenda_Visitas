@@ -1,12 +1,9 @@
 import os
 from flask import Flask, render_template, request, redirect
 from flask_sqlalchemy import SQLAlchemy
+import sys
 
 app = Flask(__name__)
-
-import sys
-print("Conectado a:", app.config['SQLALCHEMY_DATABASE_URI'], file=sys.stderr)
-
 
 # Obtener la URL de la base de datos de las variables de entorno
 database_url = os.environ.get('DATABASE_URL')
@@ -18,6 +15,9 @@ if database_url and database_url.startswith("postgres://"):
 # Configurar la base de datos
 app.config['SQLALCHEMY_DATABASE_URI'] = database_url or 'sqlite:///database.db'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+
+# 👇 Aquí es seguro imprimir la URL
+print("Conectado a:", app.config['SQLALCHEMY_DATABASE_URI'], file=sys.stderr)
 
 db = SQLAlchemy(app)
 
@@ -49,5 +49,3 @@ def index():
 
 if __name__ == '__main__':
     app.run(debug=True)
-
-
