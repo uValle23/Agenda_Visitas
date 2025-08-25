@@ -5,12 +5,11 @@ import sys
 
 app = Flask(__name__)
 
-# 🔹 Forzar a usar PostgreSQL siempre
+# 🔹 Tomar siempre la variable de entorno DATABASE_URL
 database_url = os.environ.get('DATABASE_URL')
 
 if not database_url:
-    # ⚠️ Si quieres, pon aquí directamente tu cadena de conexión de Render (más seguro dejarla como variable de entorno)
-    database_url = "postgresql://agenda_visitas_db_user:rvfVM5p8Hps45OIz6PjeFklxBxqSd18P@dpg-d2jopr6mcj7s739fqe10-a.oregon-postgres.render.com/agenda_visitas_db"
+    raise RuntimeError("❌ No se encontró la variable DATABASE_URL. Configúrala en Render.")
 
 # Render a veces da postgres:// en lugar de postgresql://
 if database_url.startswith("postgres://"):
