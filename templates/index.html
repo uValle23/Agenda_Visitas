@@ -419,9 +419,9 @@
         </div>
         
         <div class="tabs">
-            <button class="tab active" onclick="showTab('nueva-cita')">📝 Nueva Cita</button>
-            <button class="tab" onclick="showTab('calendario')">📅 Calendario</button>
-            <button class="tab" onclick="showTab('lista-citas')">📋 Lista de Citas</button>
+            <button class="tab active" onclick="showTab(event, 'nueva-cita')">📝 Nueva Cita</button>
+            <button class="tab" onclick="showTab(event, 'calendario')">📅 Calendario</button>
+            <button class="tab" onclick="showTab(event, 'lista-citas')">📋 Lista de Citas</button>
         </div>
         
         <div id="nueva-cita" class="tab-content active">
@@ -575,43 +575,36 @@
             <div id="appointmentsList"></div>
         </div>
     </div>
-
+    
     <script>
         let appointments = [];
-
-// Cargar citas desde el servidor al iniciar
-	fetch('/api/citas')
-  	  .then(res => res.json())
-  	  .then(data => {
-      	  appointments = data;
-        	renderCalendar();
-	        renderAppointmentsList();
-	    })
-    	.catch(err => {
- 	       console.error('Error cargando citas del servidor:', err);
-	    });
-
         let currentDate = new Date();
         let selectedDate = null;
+        let selectedAppointments = [];
 
-        // Función para mostrar pestañas
-        function showTab(tabName) {
-            // Ocultar todos los contenidos
+        // Fetch appointments on load
+        fetch('/api/citas')
+            .then(res => res.json())
+            .then(data => {
+                appointments = data;
+                renderCalendar();
+                renderAppointmentsList();
+            })
+            .catch(err => {
+                console.error('Error cargando citas del servidor:', err);
+            });
+            
+        function showTab(event, tabName) {
             document.querySelectorAll('.tab-content').forEach(content => {
                 content.classList.remove('active');
             });
-            
-            // Ocultar todos los tabs
             document.querySelectorAll('.tab').forEach(tab => {
                 tab.classList.remove('active');
             });
-            
-            // Mostrar el contenido seleccionado
+
             document.getElementById(tabName).classList.add('active');
-            
-            // Activar el tab correspondiente
             event.target.classList.add('active');
-            
+
             if (tabName === 'calendario') {
                 renderCalendar();
             } else if (tabName === 'lista-citas') {
@@ -619,87 +612,164 @@
             }
         }
 
-// Función mejorada para exportar a CSV con formato correcto para Excel
-        function exportToCSV() {
-            if (appointments.length === 0) {
-                alert('No hay citas para exportar');
+        document.getElementById('fechaVisita').addEventListener('change', (e) => {
+            const date = new Date(e.target.value + 'T00:00:00');
+            const options = { weekday: 'long' };
+            document.getElementById('diaDisplay').textContent = date.toLocaleDateString('es-ES', options).toUpperCase();
+        });
+
+        document.getElementById('agendaForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+
+            const form = e.target;
+            const nombreAdmin = form.nombreAdmin.value;
+            const fechaVisita = form.fechaVisita.value;
+            const horaVisita = form.horaVisita.value;
+            let programador = form.programador.value;
+
+            if (programador === 'OTROS') {
+                programador = form.otroNombre.value;
+            }
+
+            const asuntos = Array.from(document.querySelectorAll('input[name="asunto"]:checked')).map(cb => cb.value);
+
+            const nuevaCita = {
+                nombre: nombreAdmin,
+                fecha: fechaVisita,
+                hora: horaVisita,
+                descripcion: JSON.stringify({
+                    numExpediente: form.numExpediente.value,
+                    fechaIngreso: form.fechaIngreso.value,
+                    dni: form.dni.value,
+                    edad: form.edad.value,
+                    manzana: form.manzana.value,
+                    lote: form.lote.value,
+                    sector: form.sector.value,
+                    asuntos: asuntos,
+                    programador: programador
+                })
+            };
+
+            try {
+                const response = await fetch('/api/citas', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(nuevaCita)
+                });
+
+                if (response.ok) {
+                    alert('¡Cita agendada exitosamente!');
+                    form.reset();
+                    // Refrescar lista y calendario
+                    fetchAppointments();
+                } else {
+                    alert('Error al agendar la cita.');
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                alert('Ocurrió un error al conectar con el servidor.');
+            }
+        });
+
+        document.getElementById('programador').addEventListener('change', (e) => {
+            const otrosInput = document.querySelector('.otros-input');
+            if (e.target.value === 'OTROS') {
+                otrosInput.style.display = 'block';
+            } else {
+                otrosInput.style.display = 'none';
+            }
+        });
+
+        function fetchAppointments() {
+            fetch('/api/citas')
+                .then(res => res.json())
+                .then(data => {
+                    appointments = data;
+                    renderAppointmentsList();
+                    renderCalendar();
+                })
+                .catch(err => {
+                    console.error('Error cargando citas del servidor:', err);
+                });
+        }
+        
+        // Función de búsqueda en la lista
+        document.getElementById('searchBox').addEventListener('input', (e) => {
+            const query = e.target.value.toLowerCase();
+            const filteredAppointments = appointments.filter(cita => {
+                const desc = JSON.parse(cita.descripcion);
+                return cita.nombre.toLowerCase().includes(query) ||
+                       desc.dni.toLowerCase().includes(query) ||
+                       desc.numExpediente.toLowerCase().includes(query);
+            });
+            renderAppointmentsList(filteredAppointments);
+        });
+
+        function renderAppointmentsList(listToRender = appointments) {
+            const listDiv = document.getElementById('appointmentsList');
+            listDiv.innerHTML = '';
+            if (listToRender.length === 0) {
+                listDiv.innerHTML = '<p style="text-align:center;">No hay citas agendadas.</p>';
                 return;
             }
 
-            // Encabezados en español para Excel
-            const headers = [
-                'Fecha de Visita',
-                'Hora de Visita',
-                'Número de Expediente',
-                'Fecha de Ingreso',
-                'Nombre del Administrado',
-                'DNI',
-                'Edad',
-                'Manzana',
-                'Lote',
-                'Sector',
-                'Asuntos',
-                'Programado por',
-                'Fecha de Creación'
-            ];
-            
-            // Crear filas de datos ordenadas por fecha y hora de visita
-            const sortedAppointments = [...appointments].sort((a, b) => {
-                const dateTimeA = new Date(a.fechaVisita + ' ' + a.horaVisita);
-                const dateTimeB = new Date(b.fechaVisita + ' ' + b.horaVisita);
-                return dateTimeA - dateTimeB;
-            });
-            
-            const csvRows = [
-                headers.join(';'), // CAMBIO CLAVE 1: de ',' a ';'
-                ...sortedAppointments.map(apt => [
-                    apt.fechaVisita || '',
-                    apt.horaVisita || '',
-                    `"${apt.numExpediente || ''}"`,
-                    apt.fechaIngreso || '',
-                    `"${apt.nombreAdmin || ''}"`,
-                    apt.dni || '',
-                    apt.edad || '',
-                    `"${apt.manzana || ''}"`,
-                    `"${apt.lote || ''}"`,
-                    `"${apt.sector || ''}"`,
-                    `"${apt.asuntos ? apt.asuntos.join('; ') : ''}"`, // CAMBIO CLAVE 2: Asuntos
-                    `"${apt.programador || ''}"`,
-                    apt.fechaCreacion ? new Date(apt.fechaCreacion).toLocaleString('es-ES') : ''
-                ].join(';')) // CAMBIO CLAVE 3: de ',' a ';'
-            ];
+            listToRender.sort((a, b) => new Date(a.fecha) - new Date(b.fecha));
 
-            // Crear el contenido CSV con BOM para UTF-8 (esto es correcto)
-            const csvContent = '\uFEFF' + csvRows.join('\n');
-            
-            // Crear y descargar el archivo
-            const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-            const link = document.createElement('a');
-            const url = URL.createObjectURL(blob);
-            link.setAttribute('href', url);
-            link.setAttribute('download', `Agenda_Visitas_${new Date().toISOString().slice(0,10)}.csv`);
-            link.style.visibility = 'hidden';
-            document.body.appendChild(link);
-            link.click();
-            document.body.removeChild(link);
-            
-            alert(`✅ Archivo CSV exportado exitosamente\n📊 Total de registros: ${appointments.length}\n📁 Nombre del archivo: Agenda_Visitas_${new Date().toISOString().slice(0,10)}.csv`);
+            listToRender.forEach(cita => {
+                const desc = JSON.parse(cita.descripcion);
+                const item = document.createElement('div');
+                item.className = 'appointment-item';
+                item.innerHTML = `
+                    <div class="appointment-time">${cita.fecha} - ${cita.hora}</div>
+                    <div class="appointment-details">
+                        <strong>Nombre:</strong> ${cita.nombre}<br>
+                        <strong>DNI:</strong> ${desc.dni}<br>
+                        <strong>Expediente:</strong> ${desc.numExpediente}<br>
+                        <strong>Asuntos:</strong> ${desc.asuntos.join(', ')}
+                    </div>
+                    <div class="appointment-actions">
+                        <button class="btn-small btn-edit" onclick="editAppointment(${cita.id})">Editar</button>
+                        <button class="btn-small btn-delete" onclick="deleteAppointment(${cita.id})">Eliminar</button>
+                    </div>
+                `;
+                listDiv.appendChild(item);
+            });
         }
-        // Renderizar calendario
+        
+        async function deleteAppointment(id) {
+            if (confirm("¿Estás seguro de que quieres eliminar esta cita?")) {
+                try {
+                    const response = await fetch(`/api/citas/${id}`, { method: 'DELETE' });
+                    if (response.ok) {
+                        alert('Cita eliminada exitosamente.');
+                        fetchAppointments();
+                    } else {
+                        alert('Error al eliminar la cita.');
+                    }
+                } catch (error) {
+                    console.error('Error:', error);
+                    alert('Ocurrió un error al conectar con el servidor.');
+                }
+            }
+        }
+        
+        function editAppointment(id) {
+            alert('Funcionalidad de edición en desarrollo para la cita con ID: ' + id);
+        }
+
         function renderCalendar() {
-            const year = currentDate.getFullYear();
-            const month = currentDate.getMonth();
-            
-            document.getElementById('calendarTitle').textContent = 
-                new Intl.DateTimeFormat('es-ES', { month: 'long', year: 'numeric' }).format(currentDate);
-            
-            const firstDay = new Date(year, month, 1).getDay();
-            const daysInMonth = new Date(year, month + 1, 0).getDate();
-            
             const calendarGrid = document.getElementById('calendarGrid');
+            const calendarTitle = document.getElementById('calendarTitle');
             calendarGrid.innerHTML = '';
             
-            // Encabezados de días
+            const monthNames = ["Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio", "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"];
+            calendarTitle.textContent = `${monthNames[currentDate.getMonth()]} ${currentDate.getFullYear()}`;
+
+            const firstDay = new Date(currentDate.getFullYear(), currentDate.getMonth(), 1);
+            const lastDay = new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 0);
+            const startDayOfWeek = firstDay.getDay();
+
+            // Días de la semana
             const dayHeaders = ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'];
             dayHeaders.forEach(day => {
                 const header = document.createElement('div');
@@ -707,324 +777,134 @@
                 header.textContent = day;
                 calendarGrid.appendChild(header);
             });
-            
-            // Días vacíos al inicio
-            for (let i = 0; i < firstDay; i++) {
+
+            // Rellenar días del mes anterior
+            for (let i = 0; i < startDayOfWeek; i++) {
                 const emptyDay = document.createElement('div');
                 emptyDay.className = 'calendar-day other-month';
                 calendarGrid.appendChild(emptyDay);
             }
             
-            // Días del mes
-            for (let day = 1; day <= daysInMonth; day++) {
-                const dayElement = document.createElement('div');
-                dayElement.className = 'calendar-day';
-                dayElement.textContent = day;
+            const appointmentsByDate = appointments.reduce((acc, cita) => {
+                const date = cita.fecha;
+                if (!acc[date]) {
+                    acc[date] = [];
+                }
+                acc[date].push(cita);
+                return acc;
+            }, {});
+
+            // Días del mes actual
+            for (let day = 1; day <= lastDay.getDate(); day++) {
+                const dayEl = document.createElement('div');
+                const dateString = `${currentDate.getFullYear()}-${(currentDate.getMonth() + 1).toString().padStart(2, '0')}-${day.toString().padStart(2, '0')}`;
+                dayEl.className = 'calendar-day';
+                dayEl.textContent = day;
+                dayEl.dataset.date = dateString;
                 
-                const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
-                const dayAppointments = appointments.filter(apt => apt.fechaVisita === dateStr);
-                
-                if (dayAppointments.length > 0) {
-                    dayElement.classList.add('has-appointment');
-                    
+                if (appointmentsByDate[dateString]) {
+                    dayEl.classList.add('has-appointment');
                     const count = document.createElement('span');
                     count.className = 'appointment-count';
-                    count.textContent = dayAppointments.length;
-                    dayElement.appendChild(count);
+                    count.textContent = appointmentsByDate[dateString].length;
+                    dayEl.appendChild(count);
                 }
-                
-                dayElement.addEventListener('click', () => {
-                    selectedDate = dateStr;
-                    showDayAppointments(dateStr);
-                    
-                    document.querySelectorAll('.calendar-day').forEach(d => d.style.border = '1px solid #e2e8f0');
-                    dayElement.style.border = '3px solid #667eea';
+
+                dayEl.addEventListener('click', () => {
+                    selectedDate = dateString;
+                    selectedAppointments = appointmentsByDate[selectedDate] || [];
+                    renderSelectedDateAppointments();
                 });
                 
-                calendarGrid.appendChild(dayElement);
+                calendarGrid.appendChild(dayEl);
             }
+
+            renderSelectedDateAppointments();
         }
 
-        // Mostrar citas del día seleccionado
-        function showDayAppointments(dateStr) {
-            const dayAppointments = appointments.filter(apt => apt.fechaVisita === dateStr);
-            const container = document.getElementById('selectedDateAppointments');
-            
-            if (dayAppointments.length === 0) {
-                container.innerHTML = '<p style="text-align: center; color: #718096;">No hay citas programadas para este día</p>';
-                return;
-            }
-            
-            container.innerHTML = dayAppointments.map(apt => `
-                <div class="appointment-item">
-                    <div class="appointment-time">${apt.horaVisita} - ${apt.nombreAdmin}</div>
-                    <div class="appointment-details">
-                        <strong>Exp:</strong> ${apt.numExpediente}<br>
-                        <strong>DNI:</strong> ${apt.dni || 'No especificado'}<br>
-                        <strong>Dirección:</strong> Mz ${apt.manzana} Lt ${apt.lote} - ${apt.sector}<br>
-                        <strong>Asuntos:</strong> ${apt.asuntos ? apt.asuntos.join(', ') : 'No especificado'}<br>
-                        <strong>Programado por:</strong> ${apt.programador}
-                    </div>
-                    <div class="appointment-actions">
-                        <button class="btn-small btn-delete" onclick="deleteAppointment('${apt.id}')">🗑️ Eliminar</button>
-                    </div>
-                </div>
-            `).join('');
-        }
-
-        // Cambiar mes
-        function changeMonth(direction) {
-            currentDate.setMonth(currentDate.getMonth() + direction);
+        function changeMonth(delta) {
+            currentDate.setMonth(currentDate.getMonth() + delta);
             renderCalendar();
         }
 
-        // Renderizar lista de citas
-        function renderAppointmentsList() {
-            const container = document.getElementById('appointmentsList');
-            const searchTerm = document.getElementById('searchBox').value.toLowerCase();
+        function renderSelectedDateAppointments() {
+            const panel = document.getElementById('selectedDateAppointments');
+            panel.innerHTML = '';
             
-            let filteredAppointments = appointments;
-            if (searchTerm) {
-                filteredAppointments = appointments.filter(apt => 
-                    (apt.nombreAdmin && apt.nombreAdmin.toLowerCase().includes(searchTerm)) ||
-                    (apt.dni && apt.dni.includes(searchTerm)) ||
-                    (apt.numExpediente && apt.numExpediente.toLowerCase().includes(searchTerm))
-                );
+            if (selectedAppointments.length === 0) {
+                panel.innerHTML = `<p style="text-align:center;">No hay citas para la fecha seleccionada.</p>`;
+                return;
             }
-            
-            // Ordenar por fecha y hora
-            filteredAppointments.sort((a, b) => {
-                const dateTimeA = new Date(a.fechaVisita + ' ' + a.horaVisita);
-                const dateTimeB = new Date(b.fechaVisita + ' ' + b.horaVisita);
-                return dateTimeA - dateTimeB;
+
+            selectedAppointments.sort((a, b) => a.hora.localeCompare(b.hora));
+
+            selectedAppointments.forEach(cita => {
+                const item = document.createElement('div');
+                item.className = 'appointment-item';
+                const desc = JSON.parse(cita.descripcion);
+                item.innerHTML = `
+                    <div class="appointment-time">${cita.hora} - ${cita.nombre}</div>
+                    <div class="appointment-details">
+                        <strong>Expediente:</strong> ${desc.numExpediente}<br>
+                        <strong>Asuntos:</strong> ${desc.asuntos.join(', ')}
+                    </div>
+                `;
+                panel.appendChild(item);
             });
-            
-            if (filteredAppointments.length === 0) {
-                container.innerHTML = '<p style="text-align: center; color: #718096;">No se encontraron citas</p>';
-                return;
-            }
-            
-            container.innerHTML = filteredAppointments.map(apt => `
-                <div class="appointment-item">
-                    <div class="appointment-time">📅 ${apt.fechaVisita} - ${apt.horaVisita}</div>
-                    <div class="appointment-details">
-                        <strong>👤 ${apt.nombreAdmin}</strong> (${apt.dni || 'Sin DNI'})<br>
-                        <strong>📁 Expediente:</strong> ${apt.numExpediente}<br>
-                        <strong>🏠 Dirección:</strong> Mz ${apt.manzana} Lt ${apt.lote} - ${apt.sector}<br>
-                        <strong>📋 Asuntos:</strong> ${apt.asuntos ? apt.asuntos.join(', ') : 'No especificado'}<br>
-                        <strong>👨‍💼 Programado por:</strong> ${apt.programador}
-                    </div>
-                    <div class="appointment-actions">
-                        <button class="btn-small btn-delete" onclick="deleteAppointment('${apt.id}')">🗑️ Eliminar</button>
-                    </div>
-                </div>
-            `).join('');
         }
-
-        // Eliminar cita
-        function deleteAppointment(id) {
-            if (confirm('¿Está seguro de que desea eliminar esta cita?')) {
-                appointments = appointments.filter(apt => apt.id !== id);
-                localStorage.setItem('appointments', JSON.stringify(appointments));
-                
-                // Actualizar todas las vistas
-                renderCalendar();
-                renderAppointmentsList();
-                if (selectedDate) {
-                    showDayAppointments(selectedDate);
-                }
-                
-                alert('Cita eliminada correctamente');
-            }
-        }
-
-        // Event listeners
-        document.getElementById('searchBox').addEventListener('input', renderAppointmentsList);
-
-        // Mostrar día de la semana cuando se selecciona fecha
-        document.getElementById('fechaVisita').addEventListener('change', function() {
-            const fecha = new Date(this.value + 'T00:00:00');
-            const dias = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
-            const dia = dias[fecha.getDay()];
-            
-            // Solo mostrar días laborables (Lunes a Viernes)
-            const diaDisplay = document.getElementById('diaDisplay');
-            if (fecha.getDay() >= 1 && fecha.getDay() <= 5) {
-                diaDisplay.textContent = `${dia} - Día laborable disponible`;
-                diaDisplay.style.background = 'linear-gradient(135deg, #48bb78, #38a169)';
-                
-                // Verificar si ya hay citas en esta fecha
-                const citasExistentes = appointments.filter(apt => apt.fechaVisita === this.value);
-                if (citasExistentes.length > 0) {
-                    diaDisplay.textContent += ` (${citasExistentes.length} cita${citasExistentes.length > 1 ? 's' : ''} programada${citasExistentes.length > 1 ? 's' : ''})`;
-                }
-            } else {
-                diaDisplay.textContent = `${dia} - Día no laborable`;
-                diaDisplay.style.background = 'linear-gradient(135deg, #f56565, #e53e3e)';
-            }
-        });
-
-        // Mostrar campo "otros" cuando se selecciona
-        document.getElementById('programador').addEventListener('change', function() {
-            const otrosInput = document.querySelector('.otros-input');
-            const otroNombre = document.getElementById('otroNombre');
-            
-            if (this.value === 'OTROS') {
-                otrosInput.style.display = 'block';
-                otroNombre.required = true;
-            } else {
-                otrosInput.style.display = 'none';
-                otroNombre.required = false;
-                otroNombre.value = '';
-            }
-        });
-
-        // Validar formulario y guardar cita
-        document.getElementById('agendaForm').addEventListener('submit', function(e) {
-            e.preventDefault();
-            
-            const checkboxes = document.querySelectorAll('input[name="asunto"]:checked');
-            if (checkboxes.length === 0) {
-                alert('Por favor seleccione al menos un asunto para la visita.');
-                return;
-            }
-
-            // Validar días laborables
-            const fechaVisita = document.getElementById('fechaVisita').value;
-            const fecha = new Date(fechaVisita + 'T00:00:00');
-            if (fecha.getDay() === 0 || fecha.getDay() === 6) {
-                alert('Por favor seleccione un día laborable (Lunes a Viernes) para la visita.');
-                return;
-            }
-
-            // Verificar conflictos de horario
-            const horaVisita = document.getElementById('horaVisita').value;
-            const conflicto = appointments.find(apt => 
-                apt.fechaVisita === fechaVisita && 
-                apt.horaVisita === horaVisita
-            );
-
-            if (conflicto) {
-                if (!confirm(`Ya existe una cita programada para ${fechaVisita} a las ${horaVisita} con ${conflicto.nombreAdmin}. ¿Desea programarla de todas formas?`)) {
-                    return;
-                }
-            }
-            
-            // Recopilar datos del formulario
-            const formData = new FormData(this);
-            const asuntos = [];
-            checkboxes.forEach(cb => asuntos.push(cb.value));
-            
-            const programador = formData.get('programador') === 'OTROS' ? 
-                formData.get('otroNombre') : formData.get('programador');
-
-            // Crear nuevo objeto de cita
-            const nuevaCita = {
-                id: Date.now().toString(),
-                numExpediente: formData.get('numExpediente'),
-                fechaIngreso: formData.get('fechaIngreso'),
-                horaIngreso: null, // Campo eliminado, se establece como nulo
-                nombreAdmin: formData.get('nombreAdmin'),
-                dni: formData.get('dni'),
-                edad: formData.get('edad'),
-                manzana: formData.get('manzana'),
-                lote: formData.get('lote'),
-                sector: formData.get('sector'),
-                asuntos: asuntos,
-                fechaVisita: fechaVisita,
-                horaVisita: horaVisita,
-                programador: programador,
-                fechaCreacion: new Date().toISOString()
-            };
-
-           // Enviar cita al servidor (POST /api/citas)
-		fetch('/api/citas', {
-   		 method: 'POST',
-   		 headers: {
-    		    'Content-Type': 'application/json'
-  	  },
- 	   body: JSON.stringify(nuevaCita)
-	})
-		.then(res => {
-	    if (!res.ok) throw new Error('Error al guardar en servidor');
-	    return res.json();
-	})
-		.then(data => {
-  	  alert(`✅ Cita guardada en la base de datos\nID: ${data.id}`);
-  	  appointments.push(data); // agregar lo que devuelve el servidor
- 	   renderCalendar();
- 	   renderAppointmentsList();
-	})
-	.catch(err => {
-  	  console.error(err);
-	    alert('❌ Error al guardar en la base de datos');
-		});
-
-            // Mostrar confirmación
-            alert(`✅ VISITA AGENDADA Y GUARDADA EXITOSAMENTE\n\n` +
-                `Expediente: ${nuevaCita.numExpediente}\n` +
-                `Administrado: ${nuevaCita.nombreAdmin}\n` +
-                `DNI: ${nuevaCita.dni}\n` +
-                `Dirección: Mz ${nuevaCita.manzana} Lt ${nuevaCita.lote} - ${nuevaCita.sector}\n` +
-                `Asuntos: ${asuntos.join(', ')}\n` +
-                `Fecha de visita: ${fechaVisita}\n` +
-                `Hora: ${horaVisita}\n` +
-                `Programado por: ${programador}\n\n` +
-                `💾 Los datos se han guardado en su disco local.`);
-
-            // Limpiar formulario
-            this.reset();
-            document.getElementById('diaDisplay').textContent = '';
-            document.querySelector('.otros-input').style.display = 'none';
-
-            // Preguntar si desea ver el calendario
-            if (confirm('¿Desea ver el calendario con la cita programada?')) {
-                showTab('calendario');
-                document.querySelector('.tab[onclick*="calendario"]').classList.add('active');
-                document.querySelector('.tab[onclick*="nueva-cita"]').classList.remove('active');
-            }
-        });
-
-        // Formatear DNI (solo números)
-        document.getElementById('dni').addEventListener('input', function() {
-            this.value = this.value.replace(/\D/g, '');
-        });
-
-        // Validar hora de visita (horario de oficina)
-        document.getElementById('horaVisita').addEventListener('change', function() {
-            const hora = this.value;
-            const [horas, minutos] = hora.split(':').map(Number);
-            const totalMinutos = horas * 60 + minutos;
-            
-            // Horario de oficina: 8:00 AM a 5:00 PM
-            if (totalMinutos < 480 || totalMinutos > 1020) { // 8:00 AM = 480 min, 5:00 PM = 1020 min
-                alert('⚠️ Horario de atención: 08:00 AM a 05:00 PM');
-                this.focus();
-            }
-        });
-
-        // Inicializar calendario al cargar la página
-        document.addEventListener('DOMContentLoaded', function() {
-            renderCalendar();
-            
-            // Mostrar estadísticas en consola
-            console.log(`📊 Estadísticas de la Agenda:`);
-            console.log(`Total de citas: ${appointments.length}`);
-            console.log(`Citas guardadas en: localStorage del navegador`);
-            
-            // Mostrar mensaje de bienvenida si es la primera vez
+        
+        function exportToCSV() {
             if (appointments.length === 0) {
-                setTimeout(() => {
-                    alert('👋 ¡Bienvenido a la Agenda de Visitas!\n\n' +
-                          '✅ ÁREA DESARROLLO URBANO\n' +
-                          '✅ Centro Poblado Victor Raúl\n' +
-                          '✅ HUANCHACO\n\n' +
-                          'By © Grupo Valle System 2025');
-                }, 1000);
+                alert('No hay citas para exportar');
+                return;
             }
-        });
+            const headers = ['Fecha de Visita', 'Hora de Visita', 'Número de Expediente', 'Fecha de Ingreso', 'Nombre del Administrado', 'DNI', 'Edad', 'Manzana', 'Lote', 'Sector', 'Asuntos', 'Programado por', 'Fecha de Creación'];
+            const sortedAppointments = [...appointments].sort((a, b) => new Date(a.fecha) - new Date(b.fecha));
+            let csvContent = "data:text/csv;charset=utf-8,\uFEFF" + headers.join(',') + '\n';
 
-        // Función para cargar datos desde archivo
+            sortedAppointments.forEach(cita => {
+                const desc = JSON.parse(cita.descripcion);
+                const row = [
+                    cita.fecha,
+                    cita.hora,
+                    desc.numExpediente,
+                    desc.fechaIngreso,
+                    cita.nombre,
+                    desc.dni,
+                    desc.edad,
+                    desc.manzana,
+                    desc.lote,
+                    desc.sector,
+                    `"${desc.asuntos.join(';')}"`, // Usar comillas para manejar comas internas
+                    desc.programador,
+                    new Date().toISOString().split('T')[0]
+                ].map(value => `"${value}"`).join(',');
+                csvContent += row + '\n';
+            });
+
+            const encodedUri = encodeURI(csvContent);
+            const link = document.createElement('a');
+            link.setAttribute('href', encodedUri);
+            link.setAttribute('download', 'citas-desarrollo-urbano.csv');
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        }
+
+        // Funciones originales que ya existían
+        // Función para descargar datos a un archivo
+        function downloadToFile() {
+            const data = JSON.stringify(appointments, null, 2);
+            const blob = new Blob([data], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = `backup-visitas-${new Date().toISOString().split('T')[0]}.json`;
+            link.click();
+            URL.revokeObjectURL(url);
+        }
+
+        // Función para cargar datos desde un archivo
         function loadFromFile() {
             const input = document.createElement('input');
             input.type = 'file';
@@ -1037,7 +917,8 @@
                         try {
                             const data = JSON.parse(e.target.result);
                             appointments = data;
-                            localStorage.setItem('appointments', JSON.stringify(appointments));
+                            // No usar localStorage ya que ahora la fuente es la DB
+                            // localStorage.setItem('appointments', JSON.stringify(appointments));
                             alert('✅ Datos cargados exitosamente');
                             renderCalendar();
                             renderAppointmentsList();
@@ -1055,8 +936,11 @@
         setInterval(() => {
             if (appointments.length > 0) {
                 console.log('💾 Respaldo automático realizado:', new Date().toLocaleTimeString());
+                // Podrías implementar una lógica para hacer un backup a la DB si fuera necesario
             }
         }, 300000); // 5 minutos
+        
+        renderCalendar();
     </script>
 </body>
 </html>
