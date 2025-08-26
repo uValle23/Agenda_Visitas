@@ -577,7 +577,20 @@
     </div>
 
     <script>
-        let appointments = JSON.parse(localStorage.getItem('appointments') || '[]');
+        let appointments = [];
+
+// Cargar citas desde el servidor al iniciar
+	fetch('/api/citas')
+  	  .then(res => res.json())
+  	  .then(data => {
+      	  appointments = data;
+        	renderCalendar();
+	        renderAppointmentsList();
+	    })
+    	.catch(err => {
+ 	       console.error('Error cargando citas del servidor:', err);
+	    });
+
         let currentDate = new Date();
         let selectedDate = null;
 
