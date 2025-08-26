@@ -583,16 +583,7 @@
         let selectedAppointments = [];
 
         // Fetch appointments on load
-        fetch('/api/citas')
-            .then(res => res.json())
-            .then(data => {
-                appointments = data;
-                renderCalendar();
-                renderAppointmentsList();
-            })
-            .catch(err => {
-                console.error('Error cargando citas del servidor:', err);
-            });
+        fetchAppointments();
             
         function showTab(event, tabName) {
             document.querySelectorAll('.tab-content').forEach(content => {
@@ -651,7 +642,8 @@
             };
 
             try {
-                const response = await fetch('/api/citas', {
+                // Se ha cambiado la URL a una URL absoluta
+                const response = await fetch(`${window.location.origin}/api/citas`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify(nuevaCita)
@@ -681,7 +673,8 @@
         });
 
         function fetchAppointments() {
-            fetch('/api/citas')
+            // Se ha cambiado la URL a una URL absoluta
+            fetch(`${window.location.origin}/api/citas`)
                 .then(res => res.json())
                 .then(data => {
                     appointments = data;
@@ -739,7 +732,8 @@
         async function deleteAppointment(id) {
             if (confirm("¿Estás seguro de que quieres eliminar esta cita?")) {
                 try {
-                    const response = await fetch(`/api/citas/${id}`, { method: 'DELETE' });
+                    // Se ha cambiado la URL a una URL absoluta
+                    const response = await fetch(`${window.location.origin}/api/citas/${id}`, { method: 'DELETE' });
                     if (response.ok) {
                         alert('Cita eliminada exitosamente.');
                         fetchAppointments();
