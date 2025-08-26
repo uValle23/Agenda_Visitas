@@ -924,9 +924,28 @@
                 fechaCreacion: new Date().toISOString()
             };
 
-            // Guardar en array y localStorage
-            appointments.push(nuevaCita);
-            localStorage.setItem('appointments', JSON.stringify(appointments));
+           // Enviar cita al servidor (POST /api/citas)
+		fetch('/api/citas', {
+   		 method: 'POST',
+   		 headers: {
+    		    'Content-Type': 'application/json'
+  	  },
+ 	   body: JSON.stringify(nuevaCita)
+	})
+		.then(res => {
+	    if (!res.ok) throw new Error('Error al guardar en servidor');
+	    return res.json();
+	})
+		.then(data => {
+  	  alert(`✅ Cita guardada en la base de datos\nID: ${data.id}`);
+  	  appointments.push(data); // agregar lo que devuelve el servidor
+ 	   renderCalendar();
+ 	   renderAppointmentsList();
+	})
+	.catch(err => {
+  	  console.error(err);
+	    alert('❌ Error al guardar en la base de datos');
+		});
 
             // Mostrar confirmación
             alert(`✅ VISITA AGENDADA Y GUARDADA EXITOSAMENTE\n\n` +
